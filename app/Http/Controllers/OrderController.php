@@ -89,4 +89,38 @@ class OrderController extends Controller
         $orders = Order::where('user_id', $user->id)->with('items.product')->latest()->get();
         return $this->sendSuccess(OrderResource::collection($orders), 'Customer orders retrieved');
     }
+
+    public function dispatchItem(Request $request, $id): JsonResponse
+    {
+        $request->validate([
+            'courier_name' => 'required|string|max:255',
+            'tracking_code' => 'required|string|max:255',
+        ]);
+
+        $user = $request->user();
+        $orderItem = OrderItem::with('product')->findOrFail($id);
+
+        if ($user->role !== 'admin' && $orderItem->product->vendor_id !== $user->id) {
+            return $this->sendError('This action is unauthorized.', 403);
+        }
+
+        $orderItem->update([
+            'status' => 'dispatched',
+            'courier_name' => $request->input('courier_name'),
+            'tracking_code' => $request->input('tracking_code'),
+        ]);
+
+        // If all items in this order are dispatched, update the main order status as well
+        $order = $orderItem->order;
+        if ($order) {
+            $allDispatched = !OrderItem::where('order_id', $order->id)
+                ->where('status', '!=', 'dispatched')
+                ->exists();
+            if ($allDispatched) {
+                $order->update(['status' => 'dispatched']);
+            }
+        }
+
+        return $this->sendSuccess(new OrderItemResource($orderItem), 'Order item dispatched successfully');
+    }
 }

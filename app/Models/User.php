@@ -39,6 +39,11 @@ class User extends Authenticatable
         return $this->hasMany(Product::class, 'vendor_id');
     }
 
+    public function vendorSetting(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(VendorSetting::class, 'user_id');
+    }
+
     public function followedVendors(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'vendor_follows', 'user_id', 'vendor_id')->withTimestamps();
@@ -51,12 +56,19 @@ class User extends Authenticatable
 
     public function getFollowersCountAttribute(): int
     {
+        if ($this->relationLoaded('followers')) {
+            return $this->followers->count();
+        }
         return $this->followers()->count();
     }
 
     public function getRatingAttribute(): float
     {
-        $avg = $this->products()->avg('rating');
+        if ($this->relationLoaded('products')) {
+            $avg = $this->products->avg('rating');
+        } else {
+            $avg = $this->products()->avg('rating');
+        }
         return $avg !== null ? round((float)$avg, 1) : 5.0;
     }
 }

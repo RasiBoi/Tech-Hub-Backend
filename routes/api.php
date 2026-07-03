@@ -26,6 +26,10 @@ Route::post('/ai/chat', [AiController::class, 'chat']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
+    Route::get('/vendor/settings', [AuthController::class, 'getVendorSettings']);
+    Route::put('/vendor/settings', [AuthController::class, 'updateVendorSettings']);
+    Route::get('/vendor/followers', [AuthController::class, 'getVendorFollowers']);
+    Route::post('/upload', [AuthController::class, 'uploadFile']);
     Route::get('/admin/vendors', [AuthController::class, 'listVendors']);
     Route::put('/admin/vendors/{id}/status', [AuthController::class, 'updateVendorStatus']);
     Route::post('/vendors/{id}/follow', [AuthController::class, 'toggleFollowVendor']);
@@ -34,6 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Order / Checkout routes
     Route::post('/orders', [OrderController::class, 'store']);
     Route::get('/orders', [OrderController::class, 'index']);
+    Route::put('/order-items/{id}/dispatch', [OrderController::class, 'dispatchItem']);
     
     // Product creation/editing (for vendors & admin)
     Route::post('/products', [ProductController::class, 'store']);

@@ -23,7 +23,14 @@ class ProductService
 
     public function getProduct(int|string $id): ?Product
     {
-        return $this->productRepository->find($id, ['*'], ['category', 'vendor']);
+        return $this->productRepository->find($id, ['*'], [
+            'category', 
+            'vendor' => function ($q) {
+                $q->with('vendorSetting')
+                  ->withCount(['followers', 'products'])
+                  ->withAvg('products', 'rating');
+            }
+        ]);
     }
 
     public function createProduct(array $data, User $user): Product
