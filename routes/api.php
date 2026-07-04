@@ -5,6 +5,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AiController;
+use App\Http\Controllers\PromotionController;
 use Illuminate\Support\Facades\Route;
 
 // Public Auth Routes
@@ -21,6 +22,9 @@ Route::get('/vendors/{id}', [AuthController::class, 'showVendor']);
 // Public AI Routes
 Route::get('/ai/health', [AiController::class, 'health']);
 Route::post('/ai/chat', [AiController::class, 'chat']);
+
+// Public Promotions Route
+Route::get('/promotions', [PromotionController::class, 'publicActivePromotions']);
 
 // Protected Routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -44,4 +48,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/products', [ProductController::class, 'store']);
     Route::put('/products/{id}', [ProductController::class, 'update']);
     Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+
+    // Policies CRUD
+    Route::get('/vendor/policies', [PromotionController::class, 'getPolicies']);
+    Route::post('/vendor/policies', [PromotionController::class, 'storePolicy']);
+    Route::put('/vendor/policies/{id}', [PromotionController::class, 'updatePolicy']);
+    Route::delete('/vendor/policies/{id}', [PromotionController::class, 'deletePolicy']);
+
+    // Promotions CRUD
+    Route::get('/vendor/promotions', [PromotionController::class, 'getPromotions']);
+    Route::post('/vendor/promotions', [PromotionController::class, 'storePromotion']);
+    Route::put('/vendor/promotions/{id}', [PromotionController::class, 'updatePromotion']);
+    Route::delete('/vendor/promotions/{id}', [PromotionController::class, 'deletePromotion']);
 });
