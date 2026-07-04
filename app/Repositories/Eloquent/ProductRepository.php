@@ -32,7 +32,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
         $version  = self::version();
         $cacheKey = 'products:list:v' . $version . ':' . md5(serialize($filters));
 
-        return Cache::remember($cacheKey, 60, function () use ($filters) {
+        $products = Cache::remember($cacheKey, 60, function () use ($filters) {
             $query = $this->model->with([
                 'category',
                 'vendor' => function ($q) {
@@ -72,6 +72,15 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
 
             return $query->get();
         });
+
+        if (!$products instanceof Collection) {
+            Cache::forget($cacheKey);
+            self::clearProductsCache();
+
+            return $this->getFilteredProducts($filters);
+        }
+
+        return $products;
     }
 
     /**
