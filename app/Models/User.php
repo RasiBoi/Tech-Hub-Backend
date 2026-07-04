@@ -54,6 +54,16 @@ class User extends Authenticatable
         return $this->belongsToMany(User::class, 'vendor_follows', 'vendor_id', 'user_id')->withTimestamps();
     }
 
+    public function promotions(): HasMany
+    {
+        return $this->hasMany(Promotion::class);
+    }
+
+    public function policies(): HasMany
+    {
+        return $this->hasMany(Policy::class);
+    }
+
     public function getFollowersCountAttribute(): int
     {
         if ($this->relationLoaded('followers')) {

@@ -56,7 +56,7 @@ class OrderController extends Controller
             $order = Order::create([
                 'user_id' => $user->id,
                 'total_amount' => $totalAmount,
-                'status' => 'completed',
+                'status' => 'processing',
             ]);
 
             foreach ($itemsToCreate as $item) {

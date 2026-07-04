@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
     'title',
     'description',
     'price',
+    'old_price',
     'image',
     'spec',
     'stock',

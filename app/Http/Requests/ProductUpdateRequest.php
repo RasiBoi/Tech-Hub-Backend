@@ -30,6 +30,7 @@ class ProductUpdateRequest extends FormRequest
             'title' => 'string|max:255',
             'description' => 'nullable|string',
             'price' => 'numeric|min:0',
+            'old_price' => 'nullable|numeric|min:0',
             'image' => 'nullable|string',
             'spec' => 'nullable|string',
             'stock' => 'integer|min:0',
