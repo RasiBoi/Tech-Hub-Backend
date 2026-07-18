@@ -11,7 +11,10 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
     'description',
     'price',
     'old_price',
+    'brand',
+    'subcategory',
     'image',
+    'images',
     'spec',
     'stock',
     'rating',
@@ -22,6 +25,10 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 ])]
 class Product extends Model
 {
+    protected $casts = [
+        'images' => 'array',
+    ];
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);

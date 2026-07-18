@@ -1,0 +1,1 @@
+<?php $r = app(\App\Repositories\Contracts\ProductRepositoryInterface::class); $prods = $r->getFilteredProducts([]); $p = $prods->first(); echo "Cat loaded: " . ($p->relationLoaded("category") ? "yes" : "no") . "\n"; echo json_encode($p->category);

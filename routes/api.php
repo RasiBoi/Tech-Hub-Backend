@@ -6,6 +6,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AiController;
 use App\Http\Controllers\PromotionController;
+use App\Http\Controllers\AiPolicyController;
 use Illuminate\Support\Facades\Route;
 
 // Public Auth Routes
@@ -60,4 +61,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/vendor/promotions', [PromotionController::class, 'storePromotion']);
     Route::put('/vendor/promotions/{id}', [PromotionController::class, 'updatePromotion']);
     Route::delete('/vendor/promotions/{id}', [PromotionController::class, 'deletePromotion']);
+
+    // AI dispute-system policy contract
+    Route::get('/vendor/ai-policies', [AiPolicyController::class, 'vendorPolicies']);
+    Route::post('/vendor/ai-policies', [AiPolicyController::class, 'storeVendorPolicy']);
+    Route::put('/vendor/ai-policies/{id}', [AiPolicyController::class, 'updateVendorPolicy']);
+    Route::delete('/vendor/ai-policies/{id}', [AiPolicyController::class, 'deleteVendorPolicy']);
+
+    Route::get('/admin/vendor-policies', [AiPolicyController::class, 'adminVendorPolicies']);
+    Route::put('/admin/vendor-policies/{id}/approval', [AiPolicyController::class, 'approveVendorPolicy']);
+    Route::get('/admin/platform-policies', [AiPolicyController::class, 'platformPolicies']);
+    Route::post('/admin/platform-policies', [AiPolicyController::class, 'storePlatformPolicy']);
 });

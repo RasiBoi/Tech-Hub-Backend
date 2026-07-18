@@ -6,6 +6,7 @@ use App\Models\Policy;
 use App\Models\Promotion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class PromotionController extends Controller
 {
@@ -62,6 +63,7 @@ class PromotionController extends Controller
             'pdf_url' => $validated['pdf_url'] ?? null,
         ]);
 
+        Cache::forget('promotions:public:active:v1');
         return $this->sendSuccess($policy, 'Policy created successfully', 211);
     }
 
@@ -149,6 +151,8 @@ class PromotionController extends Controller
             'policy_id' => $validated['policy_id'] ?? null,
         ]);
 
+        // Invalidate public promotions cache
+        Cache::forget('promotions:public:active:v1');
         return $this->sendSuccess($promotion->load('policy'), 'Promotion created successfully', 211);
     }
 
@@ -181,6 +185,8 @@ class PromotionController extends Controller
             'policy_id' => $validated['policy_id'] ?? null,
         ]);
 
+        // Invalidate public promotions cache
+        Cache::forget('promotions:public:active:v1');
         return $this->sendSuccess($promotion->load('policy'), 'Promotion updated successfully');
     }
 
@@ -194,19 +200,28 @@ class PromotionController extends Controller
         $promotion = Promotion::where('user_id', $user->id)->findOrFail($id);
         $promotion->delete();
 
+        // Invalidate public promotions cache
+        Cache::forget('promotions:public:active:v1');
         return $this->sendSuccess(null, 'Promotion deleted successfully');
     }
 
     // PUBLIC ENDPOINTS
     public function publicActivePromotions(Request $request): JsonResponse
     {
-        $promotions = Promotion::where('is_active', true)
-            ->with(['user' => function ($query) {
-                $query->select('id', 'store_name', 'name');
-            }, 'policy'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        // Cache as a plain array — same approach as products/categories.
+        // Storing live Eloquent Collections in the file cache can corrupt
+        // relationship data on deserialization, causing empty responses.
+        $promotions = Cache::remember('promotions:public:active:v1', 300, function () {
+            return Promotion::where('is_active', true)
+                ->with(['user' => function ($query) {
+                    $query->select('id', 'store_name', 'name');
+                }, 'policy'])
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->toArray();  // ← safe for file-cache round-trips
+        });
 
         return $this->sendSuccess($promotions, 'Active promotions retrieved successfully');
     }
 }
+

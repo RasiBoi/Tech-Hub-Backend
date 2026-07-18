@@ -34,6 +34,10 @@ class ProductController extends Controller
 
     public function show($id): JsonResponse
     {
+        if (!ctype_digit((string) $id)) {
+            return $this->sendError('Product not found', 404);
+        }
+
         $product = $this->productService->getProduct($id);
 
         if (!$product) {
