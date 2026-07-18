@@ -6,7 +6,6 @@ use App\Models\Category;
 use App\Traits\ApiResponse;
 use App\Http\Resources\CategoryResource;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 
 class CategoryController extends Controller
@@ -15,25 +14,24 @@ class CategoryController extends Controller
 
     public function index(): JsonResponse
     {
-        // Cache categories for 5 minutes — they change very rarely
         $cacheKey = 'categories:index:v1';
-        $categories = Cache::remember($cacheKey, 300, function () {
+
+        // Cache as a plain array to avoid Eloquent-Collection deserialization
+        // issues that cause the cache to be bypassed on every request.
+        $cached = Cache::remember($cacheKey, 300, function () {
             return Category::query()
                 ->select(['id', 'name', 'slug', 'image'])
                 ->orderBy('name')
-                ->get();
+                ->get()
+                ->toArray();
         });
 
-        if (!$categories instanceof Collection) {
-            Cache::forget($cacheKey);
-            $categories = Category::query()
-                ->select(['id', 'name', 'slug', 'image'])
-                ->orderBy('name')
-                ->get();
-
-            Cache::put($cacheKey, $categories, 300);
-        }
+        // Re-hydrate so CategoryResource::collection() works unchanged.
+        $categories = is_array($cached)
+            ? Category::hydrate($cached)
+            : $cached;
 
         return $this->sendSuccess(CategoryResource::collection($categories), 'Categories retrieved successfully');
     }
 }
+

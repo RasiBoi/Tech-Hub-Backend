@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'role', 'store_name', 'avatar_bg', 'status', 'store_description', 'banner_url'])]
+#[Fillable(['ai_uuid', 'name', 'email', 'password', 'role', 'store_name', 'avatar_bg', 'status', 'store_description', 'banner_url'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -62,6 +62,16 @@ class User extends Authenticatable
     public function policies(): HasMany
     {
         return $this->hasMany(Policy::class);
+    }
+
+    public function customerProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Customer::class, 'user_id');
+    }
+
+    public function vendorPolicies(): HasMany
+    {
+        return $this->hasMany(VendorPolicy::class, 'vendor_user_id');
     }
 
     public function getFollowersCountAttribute(): int

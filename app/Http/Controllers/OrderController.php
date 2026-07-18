@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\Customer;
 use App\Traits\ApiResponse;
 use App\Http\Resources\OrderResource;
 use App\Http\Resources\OrderItemResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class OrderController extends Controller
 {
@@ -22,6 +24,10 @@ class OrderController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
+            'payment_method' => 'nullable|string|max:255',
+            'shipping_name' => 'nullable|string|max:255',
+            'shipping_phone' => 'nullable|string|max:255',
+            'shipping_address' => 'nullable|string|max:2000',
         ]);
 
         $user = $request->user();
@@ -29,9 +35,21 @@ class OrderController extends Controller
         return DB::transaction(function () use ($request, $user) {
             $totalAmount = 0;
             $itemsToCreate = [];
+            $itemSnapshots = [];
+            $vendorIds = [];
+
+            $customer = Customer::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'id' => $user->ai_uuid,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'tier' => 'standard',
+                ]
+            );
 
             foreach ($request->items as $itemData) {
-                $product = Product::findOrFail($itemData['product_id']);
+                $product = Product::with('vendor')->findOrFail($itemData['product_id']);
 
                 if ($product->stock < $itemData['quantity']) {
                     return $this->sendError(
@@ -51,19 +69,52 @@ class OrderController extends Controller
                     'price' => $price,
                     'quantity' => $quantity,
                 ];
+
+                $vendorUuid = $product->vendor?->ai_uuid;
+                if ($vendorUuid) {
+                    $vendorIds[] = $vendorUuid;
+                }
+
+                $itemSnapshots[] = [
+                    'product_id' => $product->id,
+                    'name' => $product->title,
+                    'qty' => $quantity,
+                    'price' => (float) $price,
+                    'vendor_id' => $vendorUuid,
+                ];
             }
 
+            $uniqueVendorIds = array_values(array_unique(array_filter($vendorIds)));
+
             $order = Order::create([
+                'ai_order_id' => (string) Str::uuid(),
                 'user_id' => $user->id,
+                'customer_id' => $customer->id,
+                'vendor_id' => count($uniqueVendorIds) === 1 ? $uniqueVendorIds[0] : null,
                 'total_amount' => $totalAmount,
+                'currency' => 'LKR',
+                'items' => $itemSnapshots,
+                'shipping_name' => $request->input('shipping_name'),
+                'shipping_phone' => $request->input('shipping_phone'),
+                'shipping_address' => $request->input('shipping_address'),
+                'payment_method' => $request->input('payment_method', 'Demo Payment'),
+                'purchase_date' => now(),
                 'status' => 'processing',
             ]);
 
+            $order->update([
+                'order_number' => 'TH-' . str_pad((string) $order->id, 8, '0', STR_PAD_LEFT),
+            ]);
+
             foreach ($itemsToCreate as $item) {
-                $order->items()->create($item);
+                $order->orderItems()->create($item);
             }
 
-            $order->load(['items.product', 'user']);
+            $customer->update([
+                'total_orders' => Order::where('customer_id', $customer->id)->count(),
+            ]);
+
+            $order->load(['orderItems.product', 'user']);
 
             return $this->sendSuccess(new OrderResource($order), 'Order placed successfully', 201);
         });
@@ -74,7 +125,7 @@ class OrderController extends Controller
         $user = $request->user();
 
         if ($user->role === 'admin') {
-            $orders = Order::with(['user', 'items.product'])->latest()->get();
+            $orders = Order::with(['user', 'orderItems.product'])->latest()->get();
             return $this->sendSuccess(OrderResource::collection($orders), 'All orders retrieved successfully');
         }
 
@@ -86,7 +137,7 @@ class OrderController extends Controller
             return $this->sendSuccess(OrderItemResource::collection($orderItems), 'Vendor order items retrieved');
         }
 
-        $orders = Order::where('user_id', $user->id)->with('items.product')->latest()->get();
+        $orders = Order::where('user_id', $user->id)->with('orderItems.product')->latest()->get();
         return $this->sendSuccess(OrderResource::collection($orders), 'Customer orders retrieved');
     }
 
@@ -117,7 +168,17 @@ class OrderController extends Controller
                 ->where('status', '!=', 'dispatched')
                 ->exists();
             if ($allDispatched) {
-                $order->update(['status' => 'dispatched']);
+                $trackingCodes = OrderItem::where('order_id', $order->id)
+                    ->whereNotNull('tracking_code')
+                    ->pluck('tracking_code')
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $order->update([
+                    'status' => 'dispatched',
+                    'tracking_number' => implode(', ', $trackingCodes),
+                ]);
             }
         }
 

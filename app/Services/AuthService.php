@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use App\Models\Customer;
 use App\Models\User;
 
 class AuthService
@@ -33,6 +34,19 @@ class AuthService
             'avatar_bg' => $data['avatar_bg'] ?? $randomColor,
             'status' => $status,
         ]);
+        $user->refresh();
+
+        if ($role === 'customer') {
+            Customer::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'id' => $user->ai_uuid,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'tier' => 'standard',
+                ]
+            );
+        }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 

@@ -13,6 +13,7 @@ class UserResource extends JsonResource
         if ($this->role !== 'vendor') {
             return [
                 'id' => $this->id,
+                'ai_uuid' => $this->ai_uuid,
                 'name' => $this->name,
                 'email' => $this->email,
                 'role' => $this->role,
@@ -62,6 +63,7 @@ class UserResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'ai_uuid' => $this->ai_uuid,
             'name' => $this->name,
             'email' => $this->email,
             'role' => $this->role,

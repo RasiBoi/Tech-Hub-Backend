@@ -7,6 +7,7 @@ use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
 use App\Traits\ApiResponse;
+use App\Models\Customer;
 use App\Models\User;
 use App\Models\VendorSetting;
 use Illuminate\Http\JsonResponse;
@@ -64,6 +65,18 @@ class AuthController extends Controller
         ]);
 
         $user->update($validated);
+
+        if ($user->role === 'customer') {
+            Customer::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'id' => $user->ai_uuid,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'tier' => 'standard',
+                ]
+            );
+        }
 
         return $this->sendSuccess(new UserResource($user), 'Profile updated successfully');
     }
