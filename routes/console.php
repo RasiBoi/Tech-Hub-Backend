@@ -177,3 +177,54 @@ Artisan::command('catalog:sync-media {--limit= : Limit imported product folders}
     $this->info("Synced {$imported} media-backed products across {$vendors->count()} vendors.");
     return 0;
 })->purpose('Sync Tech-Hub media folders into the catalog database');
+
+Artisan::command('ai:backfill-policies', function () {
+    $webhook = config('services.ai.policy_sync_webhook_url');
+    if (!$webhook) {
+        $this->error('AI_POLICY_SYNC_WEBHOOK_URL is not set.');
+        return 1;
+    }
+
+    $vendors = \App\Models\VendorPolicy::where('approved_by_admin', true)->get();
+    foreach ($vendors as $policy) {
+        \App\Jobs\SyncPolicyToAiJob::dispatchSync(
+            'UPDATE',
+            'vendor_policies',
+            [
+                'id' => $policy->id,
+                'vendor_id' => $policy->vendor_id,
+                'policy_name' => $policy->policy_name,
+                'policy_type' => $policy->policy_type,
+                'max_return_days' => $policy->max_return_days,
+                'refund_type' => $policy->refund_type,
+                'restocking_fee_percent' => $policy->restocking_fee_percent,
+                'conditions' => $policy->conditions,
+                'document_format' => $policy->document_format,
+                'policy_body' => $policy->policy_body,
+                'document_url' => $policy->document_url,
+                'approved_by_admin' => true,
+            ],
+        );
+        $this->line("Queued vendor policy {$policy->id}");
+    }
+
+    $platforms = \App\Models\PlatformPolicy::all();
+    foreach ($platforms as $policy) {
+        \App\Jobs\SyncPolicyToAiJob::dispatchSync(
+            'UPDATE',
+            'platform_policies',
+            [
+                'id' => $policy->id,
+                'policy_key' => $policy->policy_key,
+                'policy_name' => $policy->policy_name,
+                'max_value' => $policy->max_value,
+                'min_value' => $policy->min_value,
+                'is_mandatory' => (bool) $policy->is_mandatory,
+            ],
+        );
+        $this->line("Queued platform policy {$policy->id}");
+    }
+
+    $this->info("Backfill complete: {$vendors->count()} vendor + {$platforms->count()} platform policies.");
+    return 0;
+})->purpose('Re-sync approved AI policies to Neo4j + Qdrant via webhook');

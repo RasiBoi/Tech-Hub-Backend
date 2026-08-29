@@ -5,6 +5,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AiController;
+use App\Http\Controllers\AiChatTokenController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\AiPolicyController;
 use Illuminate\Support\Facades\Route;
@@ -31,6 +32,7 @@ Route::get('/promotions', [PromotionController::class, 'publicActivePromotions']
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/ai/chat-token', [AiChatTokenController::class, 'mint']);
     Route::get('/vendor/settings', [AuthController::class, 'getVendorSettings']);
     Route::put('/vendor/settings', [AuthController::class, 'updateVendorSettings']);
     Route::get('/vendor/followers', [AuthController::class, 'getVendorFollowers']);

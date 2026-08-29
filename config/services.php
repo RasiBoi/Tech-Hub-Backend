@@ -36,7 +36,10 @@ return [
     ],
 
     'ai' => [
+        'base_url' => env('AI_SERVICE_BASE_URL', 'http://127.0.0.1:8080'),
         'policy_sync_webhook_url' => env('AI_POLICY_SYNC_WEBHOOK_URL'),
+        'chat_token_secret' => env('AI_CHAT_TOKEN_SECRET'),
+        'chat_token_ttl_seconds' => (int) env('AI_CHAT_TOKEN_TTL_SECONDS', 3600),
     ],
 
 ];
