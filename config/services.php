@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'ai' => [
+        'policy_sync_webhook_url' => env('AI_POLICY_SYNC_WEBHOOK_URL'),
+    ],
+
 ];

@@ -23,7 +23,14 @@ class ProductService
 
     public function getProduct(int|string $id): ?Product
     {
-        return $this->productRepository->find($id, ['*'], ['category', 'vendor']);
+        return $this->productRepository->find($id, ['*'], [
+            'category', 
+            'vendor' => function ($q) {
+                $q->with('vendorSetting')
+                  ->withCount(['followers', 'products'])
+                  ->withAvg('products', 'rating');
+            }
+        ]);
     }
 
     public function createProduct(array $data, User $user): Product
@@ -32,7 +39,10 @@ class ProductService
             'title' => $data['title'],
             'description' => $data['description'] ?? null,
             'price' => $data['price'],
+            'brand' => $data['brand'] ?? null,
+            'subcategory' => $data['subcategory'] ?? null,
             'image' => $data['image'] ?? null,
+            'images' => $data['images'] ?? null,
             'spec' => $data['spec'] ?? null,
             'stock' => $data['stock'] ?? 10,
             'rating' => 5.00,

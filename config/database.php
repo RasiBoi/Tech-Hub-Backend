@@ -96,7 +96,13 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Force SSL — Supabase requires it. 'prefer' wastes time negotiating.
+            'sslmode' => env('DB_SSLMODE', 'require'),
+            // Reuse the TCP connection across PHP worker requests to avoid
+            // repeated SSL handshakes (~150-400ms each) to the remote host.
+            'options' => [
+                PDO::ATTR_PERSISTENT => true,
+            ],
         ],
 
         'sqlsrv' => [

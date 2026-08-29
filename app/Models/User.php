@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'role', 'store_name', 'avatar_bg', 'status', 'store_description', 'banner_url'])]
+#[Fillable(['ai_uuid', 'name', 'email', 'password', 'role', 'store_name', 'avatar_bg', 'status', 'store_description', 'banner_url'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -39,6 +39,11 @@ class User extends Authenticatable
         return $this->hasMany(Product::class, 'vendor_id');
     }
 
+    public function vendorSetting(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(VendorSetting::class, 'user_id');
+    }
+
     public function followedVendors(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'vendor_follows', 'user_id', 'vendor_id')->withTimestamps();
@@ -49,14 +54,41 @@ class User extends Authenticatable
         return $this->belongsToMany(User::class, 'vendor_follows', 'vendor_id', 'user_id')->withTimestamps();
     }
 
+    public function promotions(): HasMany
+    {
+        return $this->hasMany(Promotion::class);
+    }
+
+    public function policies(): HasMany
+    {
+        return $this->hasMany(Policy::class);
+    }
+
+    public function customerProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Customer::class, 'user_id');
+    }
+
+    public function vendorPolicies(): HasMany
+    {
+        return $this->hasMany(VendorPolicy::class, 'vendor_user_id');
+    }
+
     public function getFollowersCountAttribute(): int
     {
+        if ($this->relationLoaded('followers')) {
+            return $this->followers->count();
+        }
         return $this->followers()->count();
     }
 
     public function getRatingAttribute(): float
     {
-        $avg = $this->products()->avg('rating');
+        if ($this->relationLoaded('products')) {
+            $avg = $this->products->avg('rating');
+        } else {
+            $avg = $this->products()->avg('rating');
+        }
         return $avg !== null ? round((float)$avg, 1) : 5.0;
     }
 }

@@ -7,6 +7,7 @@ use App\Http\Requests\ProductUpdateRequest;
 use App\Http\Resources\ProductResource;
 use App\Services\ProductService;
 use App\Traits\ApiResponse;
+use App\Repositories\Eloquent\ProductRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -33,6 +34,10 @@ class ProductController extends Controller
 
     public function show($id): JsonResponse
     {
+        if (!ctype_digit((string) $id)) {
+            return $this->sendError('Product not found', 404);
+        }
+
         $product = $this->productService->getProduct($id);
 
         if (!$product) {
@@ -51,6 +56,9 @@ class ProductController extends Controller
 
         $product->load(['category', 'vendor']);
 
+        // Invalidate the products list cache so fresh data is served
+        ProductRepository::clearProductsCache();
+
         return $this->sendSuccess(new ProductResource($product), 'Product created successfully', 201);
     }
 
@@ -63,6 +71,9 @@ class ProductController extends Controller
         }
 
         $product = $this->productService->getProduct($id);
+
+        // Invalidate the products list cache so fresh data is served
+        ProductRepository::clearProductsCache();
 
         return $this->sendSuccess(new ProductResource($product), 'Product updated successfully');
     }
@@ -82,6 +93,9 @@ class ProductController extends Controller
         }
 
         $this->productService->deleteProduct($id);
+
+        // Invalidate the products list cache so fresh data is served
+        ProductRepository::clearProductsCache();
 
         return $this->sendSuccess(null, 'Product deleted successfully');
     }
