@@ -274,6 +274,8 @@ class AuthController extends Controller
             $user->update(['store_description' => $validated['company_profile']]);
         }
 
+        \App\Models\VendorPolicy::syncFromStoreSettings($user->fresh(), $settings->fresh());
+
         return $this->sendSuccess($settings, 'Vendor settings updated successfully');
     }
 
