@@ -98,11 +98,20 @@ return [
             'search_path' => 'public',
             // Force SSL — Supabase requires it. 'prefer' wastes time negotiating.
             'sslmode' => env('DB_SSLMODE', 'require'),
-            // Reuse the TCP connection across PHP worker requests to avoid
-            // repeated SSL handshakes (~150-400ms each) to the remote host.
-            'options' => [
-                PDO::ATTR_PERSISTENT => true,
-            ],
+            // Supabase pooler (PgBouncer transaction mode, port 6543) does not
+            // support server-side prepared statements across checkouts.
+            // Emulate prepares client-side and avoid persistent PDO handles —
+            // otherwise you get: prepared statement "pdo_stmt_…" does not exist.
+            'options' => extension_loaded('pdo_pgsql') ? array_filter([
+                PDO::ATTR_EMULATE_PREPARES => filter_var(
+                    env('DB_EMULATE_PREPARES', true),
+                    FILTER_VALIDATE_BOOLEAN,
+                ),
+                PDO::ATTR_PERSISTENT => filter_var(
+                    env('DB_PERSISTENT', false),
+                    FILTER_VALIDATE_BOOLEAN,
+                ),
+            ], static fn ($value) => $value !== null) : [],
         ],
 
         'sqlsrv' => [

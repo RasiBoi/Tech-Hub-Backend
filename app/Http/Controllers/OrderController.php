@@ -38,14 +38,20 @@ class OrderController extends Controller
             $itemSnapshots = [];
             $vendorIds = [];
 
+            $customerPayload = [
+                'id' => $user->ai_uuid,
+                'name' => $user->name,
+                'email' => $user->email,
+                'tier' => 'standard',
+            ];
+            $phone = $this->normalizePhone($request->input('shipping_phone'));
+            if ($phone) {
+                $customerPayload['external_user_id'] = $phone;
+            }
+
             $customer = Customer::updateOrCreate(
                 ['user_id' => $user->id],
-                [
-                    'id' => $user->ai_uuid,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'tier' => 'standard',
-                ]
+                $customerPayload
             );
 
             foreach ($request->items as $itemData) {
@@ -183,5 +189,15 @@ class OrderController extends Controller
         }
 
         return $this->sendSuccess(new OrderItemResource($orderItem), 'Order item dispatched successfully');
+    }
+
+    private function normalizePhone(?string $phone): ?string
+    {
+        if ($phone === null || trim($phone) === '') {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $phone);
+        return $digits !== '' ? $digits : null;
     }
 }
