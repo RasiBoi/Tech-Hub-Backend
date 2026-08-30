@@ -294,7 +294,7 @@ class AuthController extends Controller
     public function uploadFile(Request $request): JsonResponse
     {
         $request->validate([
-            'file' => 'required|file|mimes:jpeg,png,jpg,gif,svg,pdf,txt|max:10240', // max 10MB
+            'file' => 'required|file|mimes:jpeg,png,jpg,gif,svg,pdf,txt,md,markdown|max:10240', // max 10MB
         ]);
 
         if ($request->hasFile('file')) {

@@ -16,6 +16,7 @@ class Customer extends Model
         'user_id',
         'name',
         'email',
+        'external_user_id',
         'tier',
         'total_orders',
         'dispute_count',
