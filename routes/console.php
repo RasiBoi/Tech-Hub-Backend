@@ -48,19 +48,21 @@ Artisan::command('catalog:sync-media {--limit= : Limit imported product folders}
     $firstImageFor = function (string $folder): string {
         $path = base_path("../Tech-Hub/Media/product_images/{$folder}");
         $file = collect(File::files($path))
-            ->first(fn ($candidate) => preg_match('/^image-1\.(png|jpe?g|webp)$/i', $candidate->getFilename()));
+            ->first(fn($candidate) => preg_match('/^image-1\.(png|jpe?g|webp)$/i', $candidate->getFilename()));
 
         return "../../Media/product_images/{$folder}/" . ($file?->getFilename() ?? 'image-1.png');
     };
 
     $categories = collect($categorySeeds)->mapWithKeys(function ($folder, $name) use ($firstImageFor) {
-        return [$name => Category::updateOrCreate(
-            ['slug' => Str::slug($name)],
-            [
-                'name' => $name,
-                'image' => $firstImageFor($folder),
-            ]
-        )];
+        return [
+            $name => Category::updateOrCreate(
+                ['slug' => Str::slug($name)],
+                [
+                    'name' => $name,
+                    'image' => $firstImageFor($folder),
+                ]
+            )
+        ];
     });
 
     $classify = function (string $slug): array {
@@ -118,9 +120,12 @@ Artisan::command('catalog:sync-media {--limit= : Limit imported product folders}
     };
 
     $vibeFromSlug = function (string $slug): ?string {
-        if (str_contains($slug, 'walnut') || str_contains($slug, 'wood')) return 'walnut';
-        if (str_contains($slug, 'black') || str_contains($slug, 'carbon')) return 'black';
-        if (str_contains($slug, 'pixel') || str_contains($slug, 'rgb') || str_contains($slug, 'nixie')) return 'cyberpunk';
+        if (str_contains($slug, 'walnut') || str_contains($slug, 'wood'))
+            return 'walnut';
+        if (str_contains($slug, 'black') || str_contains($slug, 'carbon'))
+            return 'black';
+        if (str_contains($slug, 'pixel') || str_contains($slug, 'rgb') || str_contains($slug, 'nixie'))
+            return 'cyberpunk';
         return 'minimalist';
     };
 
@@ -133,9 +138,9 @@ Artisan::command('catalog:sync-media {--limit= : Limit imported product folders}
     foreach ($folders as $index => $folderPath) {
         $slug = basename($folderPath);
         $images = collect(File::files($folderPath))
-            ->filter(fn ($file) => preg_match('/\.(png|jpe?g|webp)$/i', $file->getFilename()))
-            ->sortBy(fn ($file) => str_pad((string) (preg_match('/image-(\d+)/i', $file->getFilename(), $m) ? $m[1] : 999), 4, '0', STR_PAD_LEFT) . $file->getFilename())
-            ->map(fn ($file) => "../../Media/product_images/{$slug}/{$file->getFilename()}")
+            ->filter(fn($file) => preg_match('/\.(png|jpe?g|webp)$/i', $file->getFilename()))
+            ->sortBy(fn($file) => str_pad((string) (preg_match('/image-(\d+)/i', $file->getFilename(), $m) ? $m[1] : 999), 4, '0', STR_PAD_LEFT) . $file->getFilename())
+            ->map(fn($file) => "../../Media/product_images/{$slug}/{$file->getFilename()}")
             ->values()
             ->all();
 
@@ -185,7 +190,7 @@ Artisan::command('ai:backfill-policies', function () {
         return 1;
     }
 
-    $vendors = \App\Models\VendorPolicy::where('approved_by_admin', true)->get();
+    $vendors = \App\Models\VendorPolicy::whereRaw('approved_by_admin IS TRUE')->get();
     foreach ($vendors as $policy) {
         \App\Jobs\SyncPolicyToAiJob::dispatchSync(
             'UPDATE',
