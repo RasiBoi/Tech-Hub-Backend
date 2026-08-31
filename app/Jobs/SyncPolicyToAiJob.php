@@ -36,15 +36,18 @@ class SyncPolicyToAiJob implements ShouldQueue
             return;
         }
 
+        $record = $this->attachLocalPdfBytes($this->record);
+        $timeout = isset($record['document_base64']) ? 120 : 45;
+
         $payload = [
             'type' => $this->type,
             'table' => $this->table,
-            'record' => $this->record,
+            'record' => $record,
             'old_record' => $this->oldRecord,
             'correlation_id' => $this->correlationId,
         ];
 
-        $response = Http::timeout(45)
+        $response = Http::timeout($timeout)
             ->withHeaders([
                 'X-Request-Id' => $this->correlationId,
                 'Idempotency-Key' => $this->correlationId,
@@ -67,6 +70,70 @@ class SyncPolicyToAiJob implements ShouldQueue
             'table' => $this->table,
             'type' => $this->type,
             'policy_id' => $this->record['id'] ?? null,
+            'pdf_attached' => isset($record['document_base64']),
         ]);
+    }
+
+    /**
+     * AWS cannot fetch Laravel's localhost upload URL. Attach the PDF bytes
+     * so the AI service can extract text without an HTTP round-trip.
+     *
+     * @param  array<string, mixed>  $record
+     * @return array<string, mixed>
+     */
+    private function attachLocalPdfBytes(array $record): array
+    {
+        $format = strtolower(trim((string) ($record['document_format'] ?? '')));
+        $url = trim((string) ($record['document_url'] ?? ''));
+        if ($format !== 'pdf' || $url === '') {
+            return $record;
+        }
+
+        $path = $this->resolveLocalUploadPath($url);
+        if ($path === null || !is_file($path) || !is_readable($path)) {
+            if ($path !== null) {
+                Log::warning('AI policy sync PDF file missing on disk', [
+                    'correlation_id' => $this->correlationId,
+                    'path' => $path,
+                ]);
+            }
+            return $record;
+        }
+
+        $size = filesize($path);
+        $maxBytes = 10 * 1024 * 1024;
+        if ($size === false || $size > $maxBytes) {
+            Log::warning('AI policy sync skipped PDF attach: unreadable or too large', [
+                'correlation_id' => $this->correlationId,
+                'bytes' => $size,
+            ]);
+            return $record;
+        }
+
+        $bytes = file_get_contents($path);
+        if ($bytes === false || $bytes === '') {
+            return $record;
+        }
+
+        $record['document_base64'] = base64_encode($bytes);
+        return $record;
+    }
+
+    private function resolveLocalUploadPath(string $url): ?string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+        if (!is_string($path) || $path === '') {
+            return null;
+        }
+
+        $filename = basename($path);
+        if ($filename === '' || str_contains($filename, '..')) {
+            return null;
+        }
+        if (strtolower((string) pathinfo($filename, PATHINFO_EXTENSION)) !== 'pdf') {
+            return null;
+        }
+
+        return public_path('uploads/' . $filename);
     }
 }
