@@ -42,7 +42,6 @@ class AiPolicyController extends Controller
             ...$validated,
             'vendor_id' => $user->ai_uuid,
             'vendor_user_id' => $user->id,
-            'approved_by_admin' => false,
         ]);
 
         return $this->sendSuccess($policy, 'Vendor AI policy submitted for admin approval', 201);
@@ -59,12 +58,8 @@ class AiPolicyController extends Controller
         $wasApproved = (bool) $policy->approved_by_admin;
         $validated = $this->validateVendorPolicyInput($request);
 
-        $policy->update([
-            ...$validated,
-            'approved_by_admin' => false,
-            'approved_at' => null,
-            'approved_by_user_id' => null,
-        ]);
+        $policy->update($validated);
+        $policy->setApproval(false);
 
         if ($wasApproved) {
             $this->dispatchPolicySync('UPDATE', 'vendor_policies', $policy->fresh(), remove: true);
@@ -117,11 +112,7 @@ class AiPolicyController extends Controller
         ]);
 
         $policy = VendorPolicy::findOrFail($id);
-        $policy->update([
-            'approved_by_admin' => $validated['approved_by_admin'],
-            'approved_at' => $validated['approved_by_admin'] ? now() : null,
-            'approved_by_user_id' => $validated['approved_by_admin'] ? $admin->id : null,
-        ]);
+        $policy->setApproval($validated['approved_by_admin'], $admin->id);
 
         $fresh = $policy->fresh();
         if ($fresh->approved_by_admin) {
@@ -243,7 +234,7 @@ class AiPolicyController extends Controller
     {
         $validated = $request->validate([
             'policy_name' => 'required|string|max:255',
-            'policy_type' => 'required|string|max:100',
+            'policy_type' => 'required|string|in:return,refund,warranty,shipping,storefront',
             'max_return_days' => 'nullable|integer|min:0|max:365',
             'refund_type' => 'nullable|string|max:100',
             'restocking_fee_percent' => 'nullable|numeric|min:0|max:100',
